@@ -81,11 +81,11 @@ Buat 2-3 quest eksploratif. Output HARUS JSON valid: {"quests":[{"question":"...
           body: JSON.stringify({
             contents: [{ parts: [{ text: fullPrompt }] }],
             generationConfig: {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 1024,
-            },
+  temperature: 0.7,
+  topK: 40,
+  topP: 0.95,
+  maxOutputTokens: 4096,  // ← NAIKKAN! Agar respon tidak terpotong
+},
           }),
           signal: controller.signal,
         }
@@ -124,42 +124,43 @@ Buat 2-3 quest eksploratif. Output HARUS JSON valid: {"quests":[{"question":"...
       })
     }
 
-    // Parse JSON dengan repair
+    // GANTI parsing JSON section dengan ini:
+
+    // Parse JSON dari response (handle incomplete/truncated responses)
     let cleanText = text.trim()
       .replace(/```json\n?/g, '').replace(/```\n?/g, '')
       .replace(/^(thought|thinking|reasoning)\s*\n?/i, '').trim()
 
+    // Extract JSON: cari { pertama dan } terakhir
     const firstBrace = cleanText.indexOf('{')
     const lastBrace = cleanText.lastIndexOf('}')
     
-    if (firstBrace === -1 || lastBrace === -1) {
-      console.warn('⚠️ No JSON brackets found, using mock')
-      return NextResponse.json({
-        success: true,
-        quests: getMockQuests(entryContext),
-        source: 'mock-no-json',
-        rawResponse: text.slice(0, 200)
-      })
-    }
-
-    const jsonOnly = cleanText.substring(firstBrace, lastBrace + 1)
-    
     let parsed
-    try {
-      parsed = JSON.parse(jsonOnly)
-    } catch {
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const jsonOnly = cleanText.substring(firstBrace, lastBrace + 1)
       try {
-        const repaired = jsonrepair(jsonOnly)
-        parsed = JSON.parse(repaired)
-        console.log('✅ jsonrepair succeeded')
-      } catch {
-        console.warn('⚠️ JSON parse failed even after repair, using mock')
-        return NextResponse.json({
-          success: true,
-          quests: getMockQuests(entryContext),
-          source: 'mock-parse-failed'
-        })
+        parsed = JSON.parse(jsonOnly)
+      } catch (parseError: any) {
+        // Coba repair dengan jsonrepair
+        try {
+          const repaired = jsonrepair(jsonOnly)
+          parsed = JSON.parse(repaired)
+          console.log('✅ jsonrepair succeeded')
+        } catch {
+          // Jika masih gagal, coba parse dengan menambahkan bracket penutup manual
+          try {
+            const fixed = jsonOnly.trimEnd() + (jsonOnly.trimEnd().endsWith(',') ? ']' : '') + '}'
+            parsed = JSON.parse(fixed)
+            console.log('✅ Manual bracket fix succeeded')
+          } catch {
+            console.warn('⚠️ All JSON parse attempts failed')
+            throw parseError
+          }
+        }
       }
+    } else {
+      console.warn('⚠️ No valid JSON brackets found in response')
+      throw new Error('Response does not contain valid JSON structure')
     }
 
     const quests = parsed.quests || []
