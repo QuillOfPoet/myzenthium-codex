@@ -10,7 +10,7 @@ export default function WorldArchive() {
   const [entries, setEntries] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   
-  // Search & Filter State (BARU)
+  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState('All')
   
@@ -24,6 +24,7 @@ export default function WorldArchive() {
   const [quests, setQuests] = useState<any[]>([])
   const [questLoading, setQuestLoading] = useState(false)
   const [questError, setQuestError] = useState('')
+  const [questSource, setQuestSource] = useState('') // Menyimpan sumber: 'ai' atau 'mock'
 
   // 1. Ambil Data
   const fetchEntries = async () => {
@@ -56,6 +57,7 @@ export default function WorldArchive() {
   const fetchQuests = async (entry: any) => {
     setQuestLoading(true)
     setQuestError('')
+    setQuestSource('') // Reset source
     setSelectedEntry(entry)
     setQuests([])
     
@@ -69,8 +71,12 @@ export default function WorldArchive() {
         }),
       })
       const data = await res.json()
-      if (data.success) setQuests(data.quests)
-      else setQuestError(data.error || 'Gagal generate quest')
+      if (data.success) {
+        setQuests(data.quests)
+        setQuestSource(data.source || 'ai') // Simpan sumber (mock atau ai)
+      } else {
+        setQuestError(data.error || 'Gagal generate quest')
+      }
     } catch (e: any) {
       setQuestError('Error koneksi: ' + e.message)
     } finally {
@@ -78,7 +84,7 @@ export default function WorldArchive() {
     }
   }
 
-  // 🔍 LOGIC FILTER (BARU)
+  // 🔍 LOGIC FILTER
   const filteredEntries = entries.filter(entry => {
     const matchesSearch = entry.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           (entry.content && entry.content.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -86,22 +92,27 @@ export default function WorldArchive() {
     return matchesSearch && matchesType;
   })
 
-  // Daftar Tipe Unik untuk Filter
   const uniqueTypes = ['All', ...Array.from(new Set(entries.map(e => e.type)))];
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-200 p-6 md:p-10">
       <div className="max-w-5xl mx-auto">
         
-        {/* HEADER */}
+        {/* HEADER + TOMBOL KEMBALI */}
         <header className="mb-8 text-center">
+          <button 
+            onClick={() => router.push('/')} 
+            className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1 mx-auto mb-2 transition w-fit"
+          >
+            ← Kembali ke Dashboard Utama
+          </button>
           <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 mb-2">
             World Archive
           </h1>
           <p className="text-gray-500">Arsip pengetahuan dunia Anda</p>
         </header>
 
-        {/* SEARCH & FILTER BAR (BARU) */}
+        {/* SEARCH & FILTER BAR */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-8 flex flex-col md:flex-row gap-4 shadow-lg sticky top-4 z-10">
           <div className="flex-1">
             <input 
@@ -212,6 +223,14 @@ export default function WorldArchive() {
               <div className="bg-red-900/20 border border-red-500/30 text-red-300 p-4 rounded-lg">⚠️ {questError}</div>
             ) : quests.length > 0 ? (
               <div className="space-y-4">
+                
+                {/* 🟡 BADGE MOCK WARNING */}
+                {questSource && questSource.includes('mock') && (
+                  <div className="mb-3 text-xs text-yellow-400 bg-yellow-900/20 px-3 py-1 rounded inline-block border border-yellow-500/30">
+                    ⚠️ Menggunakan Mock Quest. Cek API Key di Vercel settings.
+                  </div>
+                )}
+
                 {quests.map((quest: any, idx: number) => (
                   <div key={idx} className="bg-gray-800/50 border-l-4 border-cyan-400 p-4 rounded-lg">
                     <div className="flex justify-between items-start gap-4 mb-2">
