@@ -4,85 +4,59 @@ import { jsonrepair } from 'jsonrepair'
 import { CONSISTENCY_SYSTEM_PROMPT } from '@/lib/ai-prompts'
 
 export async function POST(request: Request) {
+  // Deklarasikan di luar try agar bisa diakses di catch
+  let entryContext: any = null
+  
   try {
     const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY not found')
-    }
+    if (!apiKey) throw new Error('GEMINI_API_KEY not found')
 
-    const { entryContext, relatedEntries } = await request.json()
+    const body = await request.json()
+    entryContext = body.entryContext // Simpan ke variabel luar
+    const { relatedEntries } = body
 
-    // Bangun prompt dengan konteks entry utama + entry terkait
+    // Bangun prompt
     const relatedContext = relatedEntries?.slice(0, 3).map((e: any) => 
       `- [${e.type}] ${e.title}: ${(e.content || '').slice(0, 200)}...`
-    ).join('\n') || 'Tidak ada entry terkait yang disediakan.'
+    ).join('\n') || 'Tidak ada entry terkait.'
 
     const userPrompt = `
-ENTRY UTAMA YANG DIAKUI:
+ENTRY UTAMA:
 - Tipe: ${entryContext.type}
 - Judul: ${entryContext.title}
-- Konten: ${entryContext.content?.slice(0, 800) || 'Belum ada konten'}
-- Tags: ${entryContext.tags?.join(', ') || 'Tidak ada'}
+- Konten: ${entryContext.content?.slice(0, 800) || 'N/A'}
 
-ENTRY TERKAIT (untuk konteks konsistensi):
+ENTRY TERKAIT:
 ${relatedContext}
 
-Tugas: Cek konsistensi entry utama terhadap entry terkait & aturan dunia implisit.
-Output HARUS JSON valid sesuai format system prompt.
+Tugas: Cek konsistensi. Output HARUS JSON valid.
 `.trim()
 
     const fullPrompt = `${CONSISTENCY_SYSTEM_PROMPT}\n\nUSER INPUT:\n${userPrompt}`
 
-    // Call Gemini API dengan timeout
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 20000) // 20 detik untuk analisis lebih dalam
-
-    let response
-    try {
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: fullPrompt }] }],
-            generationConfig: {
-              temperature: 0.3, // Lebih deterministik untuk analisis
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 4096,
-            },
-          }),
-          signal: controller.signal,
-        }
-      )
-      clearTimeout(timeoutId)
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId)
-      if (fetchError.name === 'AbortError') {
-        throw new Error('Consistency check timed out. Please try again.')
+    // Call Gemini API
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: fullPrompt }] }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 4096,
+          },
+        }),
       }
-      throw fetchError
-    }
+    )
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(`Gemini API error: ${response.status} - ${JSON.stringify(errorData)}`)
-    }
+    if (!response.ok) throw new Error(`API Error: ${response.status}`)
 
     const data = await response.json()
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!text) throw new Error('Empty response')
 
-    if (!text) {
-      return NextResponse.json({
-        success: true,
-        comments: [],
-        summary: 'Tidak ada feedback dari AI. Coba lagi nanti.',
-        source: 'empty-response'
-      })
-    }
-
-    // Parse JSON dengan repair
+    // Parse JSON dengan jsonrepair
     let cleanText = text.trim()
       .replace(/```json\n?/g, '').replace(/```\n?/g, '')
       .replace(/^(thought|thinking|reasoning)\s*\n?/i, '').trim()
@@ -91,20 +65,16 @@ Output HARUS JSON valid sesuai format system prompt.
     const lastBrace = cleanText.lastIndexOf('}')
     
     let parsed
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    if (firstBrace !== -1 && lastBrace !== -1) {
       const jsonOnly = cleanText.substring(firstBrace, lastBrace + 1)
       try {
         parsed = JSON.parse(jsonOnly)
       } catch {
-        try {
-          const repaired = jsonrepair(jsonOnly)
-          parsed = JSON.parse(repaired)
-        } catch {
-          throw new Error('Failed to parse consistency response')
-        }
+        const repaired = jsonrepair(jsonOnly)
+        parsed = JSON.parse(repaired)
       }
     } else {
-      throw new Error('No valid JSON in consistency response')
+      throw new Error('No JSON found')
     }
 
     return NextResponse.json({
@@ -114,20 +84,20 @@ Output HARUS JSON valid sesuai format system prompt.
       source: 'ai'
     })
 
-    } catch (error: any) {
-    console.error('Consistency Check Error:', error)
+  } catch (error: any) {
+    console.error('Consistency Error:', error)
     
-    // Fallback ke mock feedback agar UI tidak broken
+    // Fallback Mock - gunakan entryContext yang sudah dideklarasikan di luar
+    const entryTitle = entryContext?.title || 'Entry ini'
+    
     return NextResponse.json({
       success: true,
-      comments: [
-        {
-          type: 'suggestion',
-          message: `[MOCK] Periksa konsistensi entry ini dengan entry lain tentang lokasi, timeline, atau karakter terkait.`,
-          severity: 'low'
-        }
-      ],
-      summary: '[MOCK] Konsistensi belum dapat dianalisis penuh. Pastikan entry terkait sudah dibuat.',
+      comments: [{
+        type: 'suggestion',
+        message: `[MOCK] Periksa apakah "${entryTitle}" konsisten dengan entry lain tentang lokasi, timeline, atau karakter terkait.`,
+        severity: 'low'
+      }],
+      summary: '[MOCK] Konsistensi belum dapat dianalisis penuh. Pastikan API key valid dan entry terkait sudah dibuat.',
       source: 'mock-fallback',
       error: error.message
     }, { status: 200 })
