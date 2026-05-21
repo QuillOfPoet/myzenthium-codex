@@ -21,9 +21,6 @@ export default function Navbar() {
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-water-300 to-water-700 shadow-[0_0_20px_rgba(77,208,225,0.5)] flex items-center justify-center group-hover:scale-110 transition-transform">
               <span className="text-xl">💧</span>
             </div>
-            <span className="text-ancient-300 font-epic text-lg tracking-wider drop-shadow-[0_0_8px_rgba(255,213,79,0.5)]">
-              Myzenthium
-            </span>
           </Link>
 
           {/* Navigation Items */}
