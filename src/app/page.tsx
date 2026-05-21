@@ -1,53 +1,62 @@
-// src/app/page.tsx
+// src/app/page.tsx - Beranda MyzenthiumCodex
+'use client'
+import { useRouter } from 'next/navigation'
+<div className="mb-8">
+  <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-water-300 to-water-700 shadow-[0_0_40px_rgba(77,208,225,0.6)] flex items-center justify-center mb-6">
+    <span className="text-4xl">💧</span>
+  </div>
+  <div className="absolute inset-0 bg-gradient-to-t from-earth-900 via-transparent to-transparent"></div>
+</div>
 export default function Home() {
+  const router = useRouter()
+
   return (
-    <main className="min-h-screen bg-gray-950 text-gray-100 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <header className="mb-8 pb-4 border-b border-gray-800">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-            MyzenthiumCodex
-          </h1>
-          <p className="text-gray-400 mt-1">Creative Intelligence Augmentation for Worldbuilders</p>
-        </header>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(77,208,225,0.1),transparent_70%)]"></div>
+      </div>
 
-        {/* Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-gray-900 rounded-lg p-4 border border-gray-800">
-            <div className="text-sm text-gray-500">World Entries</div>
-            <div className="text-2xl font-bold text-purple-400">0</div>
-          </div>
-          <div className="bg-gray-900 rounded-lg p-4 border border-gray-800">
-            <div className="text-sm text-gray-500">Active Drafts</div>
-            <div className="text-2xl font-bold text-cyan-400">0</div>
-          </div>
-          <div className="bg-gray-900 rounded-lg p-4 border border-gray-800">
-            <div className="text-sm text-gray-500">AI Quests</div>
-            <div className="text-2xl font-bold text-emerald-400">0</div>
+      <div className="relative z-10 text-center max-w-3xl mx-auto animate-flow-in">
+        <div className="mb-8">
+          <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-water-300 to-water-700 shadow-[0_0_40px_rgba(77,208,225,0.6)] flex items-center justify-center mb-6">
+            <span className="text-4xl">💧</span>
           </div>
         </div>
 
-        {/* Tombol Menuju World Archive (BARU) */}
-        <div className="mt-6 mb-10">
-          <a 
-            href="/world" 
-            className="inline-block bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white px-6 py-3 rounded-lg font-bold transition shadow-lg shadow-purple-900/20"
+        <h1 className="text-6xl md:text-7xl font-bold mb-4 font-epic text-ancient-300 drop-shadow-[0_0_20px_rgba(255,213,79,0.6)]">
+          Myzenthium Codex
+        </h1>
+        
+        <p className="text-xl md:text-2xl text-water-300/80 mb-3 font-lore italic">
+          "Di tanah yang kering, air adalah legenda"
+        </p>
+        
+        <p className="text-water-300/60 mb-12 font-lore">
+          Abadikan kisah-kisah dunia Anda dalam khazanah abadi
+        </p>
+
+        <div className="flex flex-col md:flex-row gap-4 justify-center">
+          <button 
+            onClick={() => router.push('/world')}
+            className="btn-water px-8 py-4 text-lg font-epic tracking-wider"
           >
-            Masuk ke World Archive →
-          </a>
+            📜 Masuk ke Khazanah Dunia
+          </button>
+          
+          <button 
+            onClick={() => router.push('/world')}
+            className="px-8 py-4 text-lg font-epic tracking-wider border-2 border-water-500/50 text-water-300 rounded-lg hover:bg-water-900/30 hover:border-water-300 transition-all duration-300"
+          >
+            ✨ Mulai Kisah Baru
+          </button>
         </div>
 
-        {/* Placeholder Panel */}
-        <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-          <h2 className="text-lg font-semibold mb-3">🚧 Under Construction</h2>
-          <p className="text-gray-400 text-sm">
-            Database terhubung. Layout dasar siap. Selanjutnya: AI Quest Engine & Consistency Checker.
+        <div className="mt-16 pt-8 border-t border-water-900/30">
+          <p className="text-sm text-water-300/40 font-lore">
+            Di bawah naungan Dewi Aumithia, setiap kisah adalah air yang menghidupkan
           </p>
-          <div className="mt-4 p-3 bg-gray-800 rounded text-xs text-gray-300 font-mono">
-            Status: Phase 2A ✓ | Next: World Archive CRUD
-          </div>
         </div>
       </div>
-    </main>
+    </div>
   )
 }

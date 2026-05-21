@@ -1,26 +1,371 @@
+/* 🎭 IMPORT FONT EPIK UNTUK TEMA LEGENDA */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+
 @import "tailwindcss";
 
+/* 🎨 CSS Variables */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Earth (Dry Land) */
+  --earth-900: #15110d;
+  --earth-800: #221b14;
+  --earth-700: #382b22;
+  
+  /* Water (Aumithia) */
+  --water-100: #e0f7fa;
+  --water-300: #4dd0e1;
+  --water-500: #00acc1;
+  --water-700: #006064;
+  --water-900: #002b36;
+  
+  /* Ancient Gold */
+  --ancient-300: #ffd54f;
+  --ancient-500: #ffb300;
+  
+  /* Fonts */
+  --font-epic: 'Cinzel', serif;      /* Untuk judul - seperti prasasti kuno */
+  --font-lore: 'Cormorant Garamond', serif;  /* Untuk konten - seperti naskah kuno */
+  --font-ui: system-ui, sans-serif;  /* Untuk UI biasa */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* 🌍 Base Styles */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--water-100);
+  background: linear-gradient(to bottom, transparent, var(--earth-800)) var(--earth-900);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+}
+
+/* 📜 Typography Epic */
+.font-epic {
+  font-family: var(--font-epic);
+  letter-spacing: 0.05em;
+}
+
+.font-lore {
+  font-family: var(--font-lore);
+  line-height: 1.8;
+}
+
+/* ... (kode CSS pool-card, btn-water, dll tetap sama) ... */
+
+/* ✅ Tailwind v4 Import */
+@import "tailwindcss";
+
+/* 🎨 CSS Variables untuk Tema Dry Land & Water */
+:root {
+  /* Earth (Dry Land) */
+  --earth-900: #15110d;
+  --earth-800: #221b14;
+  --earth-700: #382b22;
+  
+  /* Water (Aumithia) */
+  --water-100: #e0f7fa;
+  --water-300: #4dd0e1;
+  --water-500: #00acc1;
+  --water-700: #006064;
+  --water-900: #002b36;
+  
+  /* Ancient Gold */
+  --ancient-300: #ffd54f;
+  
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Merriweather', Georgia, serif;
+}
+
+/* 🌍 Base Styles */
+body {
+  color: var(--water-100);
+  background: linear-gradient(to bottom, transparent, var(--earth-800)) var(--earth-900);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+/* 🎴 POOL CARD - Entry Cards (Plain CSS, NO @apply) */
+.pool-card {
+  background: linear-gradient(135deg, 
+    rgba(0, 43, 54, 0.8), 
+    rgba(21, 17, 13, 0.9));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(77, 208, 225, 0.3);
+  border-radius: 0.75rem;
+  box-shadow: 
+    0 0 15px 2px rgba(77, 208, 225, 0.3),
+    inset 0 0 10px rgba(77, 208, 225, 0.1);
+  transition: all 0.3s ease;
+}
+
+.pool-card:hover {
+  box-shadow: 
+    0 0 25px 5px rgba(77, 208, 225, 0.5),
+    inset 0 0 15px rgba(77, 208, 225, 0.2);
+  border-color: rgba(77, 208, 225, 0.6);
+  transform: translateY(-2px);
+}
+
+/* 💧 WATER BUTTON */
+.btn-water {
+  background: linear-gradient(135deg, var(--water-700), var(--water-500));
+  color: white;
+  font-weight: 600;
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(77, 208, 225, 0.5);
+  box-shadow: 0 0 10px rgba(0, 172, 193, 0.4);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-water:hover {
+  box-shadow: 0 0 20px rgba(77, 208, 225, 0.7);
+}
+
+/* 📜 ANCIENT TEXT */
+.text-ancient {
+  font-family: var(--font-serif);
+  letter-spacing: 0.05em;
+  color: rgba(255, 213, 79, 0.8);
+}
+
+/* 🌀 ANIMATIONS */
+@keyframes flowIn {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-flow-in {
+  animation: flowIn 0.6s ease-out forwards;
+}
+
+/* 🖱️ CUSTOM SCROLLBAR */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--earth-900); }
+::-webkit-scrollbar-thumb { 
+  background: var(--earth-700); 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--water-300); }
+/* 🎨 Custom Dropdown Styling */
+select {
+  background-image: none;
+}
+
+select option {
+  background-color: var(--earth-900);
+  color: var(--water-300);
+  padding: 8px;
+}
+
+/* Better Focus States */
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 3px rgba(77, 208, 225, 0.2);
+}
+
+/* Custom Scrollbar untuk Dropdown */
+select::-webkit-scrollbar {
+  width: 8px;
+}
+
+select::-webkit-scrollbar-track {
+  background: var(--earth-900);
+}
+
+select::-webkit-scrollbar-thumb {
+  background: var(--water-700);
+  border-radius: 4px;
+}
+
+select::-webkit-scrollbar-thumb:hover {
+  background: var(--water-500);
+}
+/* Dry Land Texture Pattern */
+body {
+  background-image: 
+    linear-gradient(to bottom, transparent, var(--earth-800)),
+    var(--earth-900);
+  background-attachment: fixed;
+}
+
+/* Optional: Add subtle crack pattern overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234dd0e1' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: -1;
+}
+/* ==========================================
+   💧 AUMITHIA VISUAL INTEGRATION (FINAL)
+   ========================================== */
+
+/* Hapus ambient light global - fokus ke card interaction saja */
+
+/* 1. Card Base dengan Glow Subtle */
+.pool-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(0, 43, 54, 0.85), rgba(21, 17, 13, 0.95));
+  border: 1px solid rgba(77, 208, 225, 0.15);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+
+/* 2. Inner Glow yang Muncul Saat Hover */
+.pool-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
+    rgba(77, 208, 225, 0.15) 0%, 
+    transparent 50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.pool-card:hover::before {
+  opacity: 1;
+}
+
+/* 3. Ripple Effect dari Posisi Kursor */
+.pool-card::after {
+  content: '';
+  position: absolute;
+  top: var(--mouse-y, 50%); 
+  left: var(--mouse-x, 50%);
+  width: 0; 
+  height: 0;
+  background: radial-gradient(circle, rgba(77, 208, 225, 0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.5s ease, height 0.5s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.pool-card:hover::after {
+  width: 400px; 
+  height: 400px;
+}
+
+.pool-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(77, 208, 225, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 172, 193, 0.2);
+}
+
+/* Pastikan konten kartu di atas efek */
+.pool-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 4. Blessing Flash Animation */
+@keyframes blessingFlash {
+  0% { box-shadow: 0 0 0 0 rgba(77, 208, 225, 0.8); }
+  50% { box-shadow: 0 0 40px 15px rgba(77, 208, 225, 0.4); }
+  100% { box-shadow: 0 0 0 0 rgba(77, 208, 225, 0); }
+}
+.blessing-active {
+  animation: blessingFlash 1.2s ease-out;
+}
+
+/* 5. AI Sparkle Effect */
+.btn-ai-sparkle {
+  position: relative;
+}
+.btn-ai-sparkle::before {
+  content: '✨';
+  position: absolute;
+  top: -6px; 
+  right: -6px;
+  font-size: 12px;
+  animation: sparkleFloat 3s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes sparkleFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  50% { transform: translateY(-5px) rotate(15deg); opacity: 0.7; }
+}
+
+/* 6. Text Shimmer untuk Judul */
+@keyframes textShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.text-shimmer {
+  background: linear-gradient(90deg, var(--ancient-300) 0%, #fff 50%, var(--ancient-300) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: textShimmer 5s linear infinite;
+}
+
+/* 7. Scrollbar Custom */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--earth-900);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--earth-700);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--water-300);
+}
+
+/* ==========================================
+   💧 AUMITHIA HERO WATERMARK
+   ========================================== */
+
+.aumithia-watermark-bg {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60vw;
+  max-width: 800px;
+  height: auto;
+  opacity: 0.04;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+.aumithia-corner-float {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 100px;
+  height: auto;
+  opacity: 0.12;
+  z-index: 40;
+  pointer-events: none;
+  filter: drop-shadow(0 0 15px rgba(77, 208, 225, 0.6));
+  animation: aumithiaFloat 8s ease-in-out infinite;
+}
+
+@keyframes aumithiaFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
+
+.navbar-aumithia-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 20px rgba(77, 208, 225, 0.7);
+  border: 2px solid rgba(77, 208, 225, 0.3);
 }

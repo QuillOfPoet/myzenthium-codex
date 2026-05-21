@@ -7,55 +7,51 @@ type PageProps = {
   params: Promise<{ id: string }>
 }
 
-export default function EntryDetail({ params }: PageProps) {
+export default function NaskahDetail({ params }: PageProps) {
   const unwrappedParams = use(params)
   const id = unwrappedParams.id
-  
   const router = useRouter()
-  const [entry, setEntry] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [isEditing, setIsEditing] = useState(false)
   
-  // Form state
-  const [formData, setFormData] = useState({
-    title: '', type: 'Character', content: '', status: 'DRAFT'
-  })
+  // State
+  const [naskah, setNaskah] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [sedangSunting, setSedangSunting] = useState(false)
+  const [formData, setFormData] = useState({ title: '', type: 'Character', content: '', status: 'DRAFT' })
 
-  // State untuk AI Quest Panel
-  const [showAiPanel, setShowAiPanel] = useState(false)
-  const [quests, setQuests] = useState<any[]>([])
+  const [tampilPanelAI, setTampilPanelAI] = useState(false)
+  const [quest, setQuest] = useState<any[]>([])
   const [questLoading, setQuestLoading] = useState(false)
   const [questError, setQuestError] = useState('')
 
-  // 🔍 STATE BARU: Consistency Checker
-  const [showConsistencyPanel, setShowConsistencyPanel] = useState(false)
-  const [consistencyComments, setConsistencyComments] = useState<any[]>([])
-  const [consistencySummary, setConsistencySummary] = useState('')
-  const [consistencyLoading, setConsistencyLoading] = useState(false)
-  const [consistencyError, setConsistencyError] = useState('')
+  const [tampilKonsistensi, setTampilKonsistensi] = useState(false)
+  const [komentarKonsistensi, setKomentarKonsistensi] = useState<any[]>([])
+  const [ringkasanKonsistensi, setRingkasanKonsistensi] = useState('')
+  const [konsistensiLoading, setKonsistensiLoading] = useState(false)
+  const [konsistensiError, setKonsistensiError] = useState('')
 
-  // 1. Ambil data entry
+  // ✅ PERBAIKAN: useEffect hanya untuk logika pengambilan data
   useEffect(() => {
     if (!id) return
     
     fetch(`/api/entries/${id}`)
       .then(res => res.json())
       .then(data => {
-        if (data.entry) {
-          setEntry(data.entry)
+        // Cek apakah data ada di field 'naskah' atau 'entry'
+        const entryData = data.naskah || data.entry
+        if (entryData) {
+          setNaskah(entryData)
           setFormData({
-            title: data.entry.title,
-            type: data.entry.type,
-            content: data.entry.content || '',
-            status: data.entry.status || 'DRAFT'
+            title: entryData.title,
+            type: entryData.type,
+            content: entryData.content || '',
+            status: entryData.status || 'DRAFT'
           })
         }
         setLoading(false)
       })
   }, [id])
 
-  // 2. Simpan perubahan
-  const handleSave = async () => {
+  const simpanPerubahan = async () => {
     const res = await fetch(`/api/entries/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -63,45 +59,37 @@ export default function EntryDetail({ params }: PageProps) {
     })
     if (res.ok) {
       const updated = await res.json()
-      setEntry(updated.entry)
-      setIsEditing(false)
+      setNaskah(updated.naskah || updated.entry)
+      setSedangSunting(false)
     } else {
-      alert('Gagal menyimpan')
+      alert('Gagal menyimpan perubahan')
     }
   }
 
-  // 3. Hapus entry
-  const handleDelete = async () => {
-    if (!confirm('Hapus entry ini permanen?')) return
+  const lenyapkanNaskah = async () => {
+    if (!confirm('Yakin ingin melenyapkan kisah ini selamanya?')) return
     const res = await fetch(`/api/entries/${id}`, { method: 'DELETE' })
     if (res.ok) router.push('/world')
   }
 
-  // 4. Request Quest ke AI
-  const handleAskAI = async () => {
-    if (!entry) return
+  const mintaQuestAI = async () => {
+    if (!naskah) return
     setQuestLoading(true)
     setQuestError('')
-    setShowAiPanel(true)
+    setTampilPanelAI(true)
     
     try {
       const res = await fetch('/api/ai/quest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entryContext: {
-            type: entry.type,
-            title: entry.title,
-            content: entry.content,
-            tags: [],
-            status: entry.status
-          },
+          entryContext: { type: naskah.type, title: naskah.title, content: naskah.content, tags: [], status: naskah.status },
           draftSnippet: ''
         }),
       })
       const data = await res.json()
-      if (data.success) setQuests(data.quests)
-      else setQuestError(data.error || 'Gagal generate quest')
+      if (data.success) setQuest(data.quests)
+      else setQuestError(data.error || 'Gagal meracik pertanyaan')
     } catch (e: any) {
       setQuestError('Error koneksi: ' + e.message)
     } finally {
@@ -109,298 +97,204 @@ export default function EntryDetail({ params }: PageProps) {
     }
   }
 
-  // 🔍 FUNGSI BARU: Request Consistency Check
-  const handleCheckConsistency = async () => {
-    if (!entry) return
-    setConsistencyLoading(true)
-    setConsistencyError('')
-    setShowConsistencyPanel(true)
+  const periksaKonsistensi = async () => {
+    if (!naskah) return
+    setKonsistensiLoading(true)
+    setKonsistensiError('')
+    setTampilKonsistensi(true)
     
     try {
-      // Ambil entry terkait untuk konteks
       const allEntriesRes = await fetch('/api/entries')
       const allEntriesData = await allEntriesRes.json()
-      const relatedEntries = (allEntriesData.entries || [])
-        .filter((e: any) => e.id !== entry.id)
+      const relatedEntries = (allEntriesData.entries || allEntriesData.naskah || [])
+        .filter((e: any) => e.id !== id)
         .slice(0, 5)
       
       const res = await fetch('/api/ai/consistency', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entryContext: {
-            type: entry.type,
-            title: entry.title,
-            content: entry.content,
-            tags: entry.tags,
-            status: entry.status
-          },
+          entryContext: { type: naskah.type, title: naskah.title, content: naskah.content, tags: naskah.tags, status: naskah.status },
           relatedEntries
         }),
       })
       
       const data = await res.json()
       if (data.success) {
-        setConsistencyComments(data.comments)
-        setConsistencySummary(data.summary)
+        setKomentarKonsistensi(data.comments)
+        setRingkasanKonsistensi(data.summary)
       } else {
-        setConsistencyError(data.error || 'Gagal menganalisis konsistensi')
+        setKonsistensiError(data.error || 'Gagal menganalisis')
       }
     } catch (e: any) {
-      setConsistencyError('Error koneksi: ' + e.message)
+      setKonsistensiError('Error koneksi: ' + e.message)
     } finally {
-      setConsistencyLoading(false)
+      setKonsistensiLoading(false)
     }
   }
 
+  // Loading State
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center text-gray-500">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
-      <span className="ml-3">Memuat entry...</span>
+    <div className="min-h-screen flex items-center justify-center text-water-300">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-water-300"></div>
+      <span className="ml-3 font-lore">Memuat naskah...</span>
     </div>
   )
   
-  if (!entry) return (
-    <div className="min-h-screen flex items-center justify-center text-red-400">
-      Entry tidak ditemukan.
+  // Not Found State
+  if (!naskah) return (
+    <div className="min-h-screen flex items-center justify-center text-red-400 font-lore">
+      Naskah tidak ditemukan.
     </div>
   )
 
+  // ✅ RENDER UI (Hanya di dalam return)
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-200 p-6 md:p-10">
+    <div className="min-h-screen p-6 md:p-10">
       <div className="max-w-4xl mx-auto">
         
-        {/* Navigasi Atas */}
-        <div className="flex justify-between items-center mb-6">
-          <button 
-            onClick={() => router.push('/world')} 
-            className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 transition"
-          >
-            ← Kembali ke Arsip
-          </button>
-          {!isEditing && (
-             <div className="flex gap-2">
-               <button 
-                 onClick={handleAskAI} 
-                 className="flex items-center gap-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 px-4 py-2 rounded-lg text-sm font-medium transition"
-               >
-                 ✨ Dapatkan Inspirasi AI
-               </button>
-               <button 
-                 onClick={handleCheckConsistency} 
-                 className="flex items-center gap-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 px-4 py-2 rounded-lg text-sm font-medium transition"
-               >
-                 🔍 Cek Konsistensi
-               </button>
-             </div>
-          )}
-        </div>
+        {/* Tombol Aksi (Sudah dihapus tombol 'Kembali' yang redundan) */}
+        {!sedangSunting && (
+          <div className="flex justify-end gap-2 mb-6">
+            <button 
+              onClick={mintaQuestAI} 
+              className="btn-water btn-ai-sparkle px-4 py-2 font-epic text-sm"
+            >
+              ✨ Tanya Penasihat
+            </button>
+            <button 
+              onClick={periksaKonsistensi} 
+              className="flex items-center gap-2 bg-emerald-700/20 hover:bg-emerald-700/40 text-emerald-300 border border-emerald-500/30 px-4 py-2 rounded-lg text-sm font-medium transition font-epic"
+            >
+              🔍 Periksa Konsistensi
+            </button>
+          </div>
+        )}
 
-        {/* Konten Utama */}
-        {!isEditing ? (
-          // MODE BACA
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 shadow-lg">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-8">
+        {/* MODE BACA */}
+        {!sedangSunting ? (
+          <div className="pool-card p-8 shadow-lg relative overflow-hidden">
+            {/* Background Watermark Aumithia (CSS) */}
+            <div className="absolute top-10 right-10 text-9xl opacity-5 pointer-events-none select-none text-water-300 font-serif">💧</div>
+
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-8 relative z-10">
               <div>
-                <span className="inline-block text-xs font-mono bg-purple-900/50 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30">
-                  {entry.type}
+                <span className="inline-block text-xs font-mono bg-water-900/50 text-water-300 px-3 py-1 rounded-full border border-water-500/30">
+                  {naskah.type}
                 </span>
-                <h1 className="text-4xl md:text-5xl font-bold mt-4 text-white">{entry.title}</h1>
+                {/* Judul dengan Shimmer Effect */}
+                <h1 className="text-4xl md:text-5xl font-bold mt-4 font-epic drop-shadow-[0_0_10px_rgba(255,213,79,0.5)] text-shimmer">
+                  {naskah.title}
+                </h1>
               </div>
               <div className="flex gap-3 shrink-0">
-                <button 
-                  onClick={() => setIsEditing(true)} 
-                  className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition"
-                >
-                  ✏️ Edit
-                </button>
-                <button 
-                  onClick={handleDelete} 
-                  className="bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 px-6 py-2 rounded-lg text-sm font-medium transition"
-                >
-                  🗑️
-                </button>
+                <button onClick={() => setSedangSunting(true)} className="btn-water px-6 py-2 font-epic">✏️ Sunting</button>
+                <button onClick={lenyapkanNaskah} className="bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 px-6 py-2 rounded-lg text-sm font-medium transition font-epic">🗑️</button>
               </div>
             </div>
 
-            <div className="prose prose-invert max-w-none text-gray-300 leading-loose text-lg whitespace-pre-wrap font-serif">
-              {entry.content || <span className="text-gray-600 italic">Belum ada konten. Klik Edit untuk mulai menulis.</span>}
+            <div className="prose prose-invert max-w-none text-water-100 leading-loose text-lg whitespace-pre-wrap font-lore relative z-10">
+              {naskah.content || <span className="text-water-300/40 italic">Belum ada goresan. Klik Sunting untuk mulai mengukir.</span>}
             </div>
 
-            <div className="mt-10 pt-6 border-t border-gray-800 flex justify-between text-xs text-gray-500 font-mono">
-              <span>STATUS: {entry.status}</span>
-              <span>LAST UPDATED: {new Date(entry.updatedAt || entry.createdAt).toLocaleDateString('id-ID')}</span>
+            <div className="mt-10 pt-6 border-t border-water-900/30 flex justify-between text-xs text-water-300/50 font-mono">
+              <span>STATUS: {naskah.status}</span>
+              <span>TERAKHIR DIPERBARUI: {new Date(naskah.updatedAt || naskah.createdAt).toLocaleDateString('id-ID')}</span>
             </div>
           </div>
         ) : (
-          // MODE EDIT
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 shadow-lg">
-            <h2 className="text-2xl font-bold mb-6 text-white">️ Edit Entry</h2>
+          // MODE SUNTING
+          <div className="pool-card p-8 shadow-lg">
+            <h2 className="text-2xl font-bold mb-6 text-ancient-300 font-epic">✏️ Sunting Naskah</h2>
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Judul</label>
-                  <input 
-                    value={formData.title} 
-                    onChange={e => setFormData({...formData, title: e.target.value})} 
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-4 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
-                  />
+                  <label className="block text-sm text-water-300/70 mb-2 font-lore">Judul</label>
+                  <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-earth-800/50 border border-water-500/30 rounded-lg p-4 text-water-100 focus:ring-2 focus:ring-water-300 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Tipe</label>
-                  <select 
-                    value={formData.type} 
-                    onChange={e => setFormData({...formData, type: e.target.value})} 
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-4 text-white"
-                  >
-                    <option>Character</option><option>Nation</option><option>City</option>
-                    <option>Magic System</option><option>Creature</option><option>Artifact</option>
+                  <label className="block text-sm text-water-300/70 mb-2 font-lore">Golongan</label>
+                  <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-earth-800/50 border border-water-500/30 rounded-lg p-4 text-water-100">
+                    <option>Character</option><option>Nation</option><option>City</option><option>Magic System</option><option>Creature</option><option>Artifact</option>
                   </select>
                 </div>
               </div>
-              
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Konten</label>
-                <textarea 
-                  value={formData.content} 
-                  onChange={e => setFormData({...formData, content: e.target.value})} 
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-4 text-white h-80 focus:ring-2 focus:ring-cyan-500 outline-none font-mono text-sm leading-relaxed"
-                />
+                <label className="block text-sm text-water-300/70 mb-2 font-lore">Isi Naskah</label>
+                <textarea value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} className="w-full bg-earth-800/50 border border-water-500/30 rounded-lg p-4 text-water-100 h-80 focus:ring-2 focus:ring-water-300 outline-none font-lore text-base leading-relaxed" />
               </div>
-
               <div className="flex gap-4 pt-4">
-                <button 
-                  onClick={handleSave} 
-                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium transition"
-                >
-                  💾 Simpan
-                </button>
-                <button 
-                  onClick={() => setIsEditing(false)} 
-                  className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-8 py-3 rounded-lg font-medium transition"
-                >
-                  Batal
-                </button>
+                <button onClick={simpanPerubahan} className="btn-water px-8 py-3 font-epic">💾 Simpan Perubahan</button>
+                <button onClick={() => setSedangSunting(false)} className="bg-earth-700 hover:bg-earth-600 text-water-100 px-8 py-3 rounded-lg font-medium transition font-epic">Batal</button>
               </div>
             </div>
           </div>
         )}
 
-        {/* AI QUEST PANEL */}
-        {showAiPanel && (
-          <div className="mt-10 bg-gradient-to-br from-gray-900 to-purple-900/20 border border-purple-500/30 rounded-xl p-6">
+        {/* PANEL QUEST AI */}
+        {tampilPanelAI && (
+          <div className="mt-10 pool-card p-6 border-water-500/50 animate-flow-in">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-purple-300">✨ AI Quests untuk "{entry.title}"</h2>
-              <button onClick={() => setShowAiPanel(false)} className="text-gray-400 hover:text-white"> Tutup</button>
+              <h2 className="text-xl font-bold text-water-300 font-epic">✨ Pertanyaan Penasihat</h2>
+              <button onClick={() => setTampilPanelAI(false)} className="text-water-300/50 hover:text-water-300 font-lore">✕ Tutup</button>
             </div>
-
             {questLoading ? (
-              <div className="flex items-center gap-3 text-purple-300 py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-400"></div>
-                <span>AI sedang membaca lore Anda dan meracik pertanyaan...</span>
+              <div className="flex items-center gap-3 text-water-300 py-8 font-lore">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-water-300"></div>
+                <span>Penasihat sedang meracik pertanyaan...</span>
               </div>
             ) : questError ? (
-              <p className="text-red-400 bg-red-900/20 p-4 rounded-lg">{questError}</p>
-            ) : quests.length > 0 ? (
+              <p className="text-red-400 bg-red-900/20 p-4 rounded-lg font-lore">{questError}</p>
+            ) : quest.length > 0 ? (
               <div className="space-y-4">
-                {quests.map((quest: any, idx: number) => (
-                  <div key={idx} className="bg-gray-800/50 border-l-4 border-cyan-400 p-4 rounded-lg hover:bg-gray-800/80 transition">
+                {quest.map((q: any, idx: number) => (
+                  <div key={idx} className="bg-earth-800/50 border-l-4 border-water-300 p-4 rounded-lg hover:bg-earth-800/80 transition">
                     <div className="flex justify-between items-start gap-4 mb-2">
-                      <p className="text-gray-100 font-medium text-lg">{quest.question}</p>
-                      <span className={`shrink-0 text-xs px-2 py-1 rounded font-mono ${
-                        quest.tier === 'BEGINNER' ? 'bg-green-900/50 text-green-300' :
-                        quest.tier === 'INTERMEDIATE' ? 'bg-yellow-900/50 text-yellow-300' :
-                        'bg-red-900/50 text-red-300'
-                      }`}>{quest.tier}</span>
+                      <p className="text-water-100 font-medium font-lore">{q.question}</p>
+                      <span className={`shrink-0 text-xs px-2 py-1 rounded font-mono ${q.tier === 'BEGINNER' ? 'bg-water-900/50 text-green-300' : q.tier === 'INTERMEDIATE' ? 'bg-water-900/50 text-yellow-300' : 'bg-water-900/50 text-red-300'}`}>{q.tier}</span>
                     </div>
-                    {quest.hint && <p className="text-gray-400 text-sm italic">💡 {quest.hint}</p>}
+                    {q.hint && <p className="text-water-300/70 text-sm italic font-lore">💡 {q.hint}</p>}
                   </div>
                 ))}
-                <div className="pt-4">
-                  <button onClick={handleAskAI} className="text-sm text-cyan-400 hover:text-cyan-300 underline">
-                    🔄 Generate Ulang Pertanyaan
-                  </button>
-                </div>
+                <div className="pt-4"><button onClick={mintaQuestAI} className="text-sm text-water-300 hover:text-water-100 underline font-lore">🔄 Racik Ulang Pertanyaan</button></div>
               </div>
-            ) : (
-              <p className="text-gray-500">Belum ada quest.</p>
-            )}
+            ) : <p className="text-water-300/50 font-lore">Belum ada pertanyaan.</p>}
           </div>
         )}
 
-        {/* 🔍 CONSISTENCY CHECKER PANEL (BARU) */}
-        {showConsistencyPanel && (
-          <div className="mt-10 bg-gradient-to-br from-gray-900 to-emerald-900/20 border border-emerald-500/30 rounded-xl p-6">
+        {/* PANEL KONSISTENSI */}
+        {tampilKonsistensi && (
+          <div className="mt-10 pool-card p-6 border-emerald-500/30 animate-flow-in">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-emerald-300">🔍 Consistency Check</h2>
-              <button onClick={() => setShowConsistencyPanel(false)} className="text-gray-400 hover:text-white">✕ Tutup</button>
+              <h2 className="text-xl font-bold text-emerald-300 font-epic">🔍 Pemeriksaan Konsistensi</h2>
+              <button onClick={() => setTampilKonsistensi(false)} className="text-water-300/50 hover:text-water-300 font-lore">✕ Tutup</button>
             </div>
-            
-            <p className="text-gray-300 mb-4">
-              Analisis untuk: <span className="font-semibold text-white">{entry.title}</span>
-            </p>
-            
-            {consistencyLoading ? (
-              <div className="flex items-center gap-3 text-emerald-300 py-4">
+            <p className="text-water-100 mb-4 font-lore">Analisis untuk: <span className="font-semibold text-ancient-300">{naskah.title}</span></p>
+            {konsistensiLoading ? (
+              <div className="flex items-center gap-3 text-emerald-300 py-4 font-lore">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-400"></div>
-                <span>AI sedang menganalisis konsistensi dunia Anda...</span>
+                <span>Penasihat sedang menganalisis konsistensi dunia Anda...</span>
               </div>
-            ) : consistencyError ? (
-              <p className="text-red-400 bg-red-900/20 p-4 rounded-lg">{consistencyError}</p>
+            ) : konsistensiError ? (
+              <p className="text-red-400 bg-red-900/20 p-4 rounded-lg font-lore">{konsistensiError}</p>
             ) : (
               <div className="space-y-4">
-                {/* Summary */}
-                <div className="bg-gray-800/50 p-4 rounded-lg border-l-4 border-emerald-400">
-                  <p className="text-gray-200 font-medium">{consistencySummary}</p>
-                </div>
-                
-                {/* Comments */}
-                {consistencyComments.length > 0 ? (
+                <div className="bg-earth-800/50 p-4 rounded-lg border-l-4 border-emerald-400"><p className="text-water-100 font-medium font-lore">{ringkasanKonsistensi}</p></div>
+                {komentarKonsistensi.length > 0 ? (
                   <div className="space-y-3">
-                    {consistencyComments.map((comment: any, idx: number) => (
-                      <div key={idx} className={`p-4 rounded-lg border-l-4 ${
-                        comment.severity === 'high' ? 'bg-red-900/20 border-red-400' :
-                        comment.severity === 'medium' ? 'bg-yellow-900/20 border-yellow-400' :
-                        'bg-gray-800/50 border-emerald-400'
-                      }`}>
+                    {komentarKonsistensi.map((comment: any, idx: number) => (
+                      <div key={idx} className={`p-4 rounded-lg border-l-4 ${comment.severity === 'high' ? 'bg-red-900/20 border-red-400' : comment.severity === 'medium' ? 'bg-yellow-900/20 border-yellow-400' : 'bg-earth-800/50 border-emerald-400'}`}>
                         <div className="flex justify-between items-start gap-3 mb-1">
-                          <span className={`text-xs font-mono px-2 py-0.5 rounded ${
-                            comment.type === 'contradiction' ? 'bg-red-900/50 text-red-300' :
-                            comment.type === 'timeline' ? 'bg-purple-900/50 text-purple-300' :
-                            comment.type === 'motivation' ? 'bg-blue-900/50 text-blue-300' :
-                            comment.type === 'world-rule' ? 'bg-cyan-900/50 text-cyan-300' :
-                            'bg-gray-700 text-gray-300'
-                          }`}>
-                            {comment.type.toUpperCase()}
-                          </span>
-                          <span className={`text-xs ${
-                            comment.severity === 'high' ? 'text-red-400' :
-                            comment.severity === 'medium' ? 'text-yellow-400' :
-                            'text-emerald-400'
-                          }`}>
-                            {comment.severity.toUpperCase()}
-                          </span>
+                          <span className={`text-xs font-mono px-2 py-0.5 rounded ${comment.type === 'contradiction' ? 'bg-red-900/50 text-red-300' : comment.type === 'timeline' ? 'bg-purple-900/50 text-purple-300' : comment.type === 'motivation' ? 'bg-blue-900/50 text-blue-300' : comment.type === 'world-rule' ? 'bg-cyan-900/50 text-cyan-300' : 'bg-earth-700 text-water-300'}`}>{comment.type.toUpperCase()}</span>
+                          <span className={`text-xs ${comment.severity === 'high' ? 'text-red-400' : comment.severity === 'medium' ? 'text-yellow-400' : 'text-emerald-400'}`}>{comment.severity.toUpperCase()}</span>
                         </div>
-                        <p className="text-gray-200">{comment.message}</p>
-                        {comment.relatedEntries?.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-2">
-                            Terkait: {comment.relatedEntries.join(', ')}
-                          </p>
-                        )}
+                        <p className="text-water-100 font-lore">{comment.message}</p>
+                        {comment.relatedEntries?.length > 0 && <p className="text-xs text-water-300/50 mt-2 font-lore">Terkait: {comment.relatedEntries.join(', ')}</p>}
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-gray-500">Tidak ada isu konsistensi yang terdeteksi.</p>
-                )}
-                
-                <button 
-                  onClick={handleCheckConsistency} 
-                  disabled={consistencyLoading}
-                  className="mt-4 text-sm text-emerald-400 hover:text-emerald-300 underline disabled:opacity-50"
-                >
-                  🔄 Analisis Ulang
-                </button>
+                ) : <p className="text-water-300/50 font-lore">Tidak ada isu konsistensi yang terdeteksi.</p>}
+                <button onClick={periksaKonsistensi} disabled={konsistensiLoading} className="mt-4 text-sm text-emerald-400 hover:text-emerald-300 underline disabled:opacity-50 font-lore">🔄 Analisis Ulang</button>
               </div>
             )}
           </div>
