@@ -21,11 +21,18 @@ export default function EntryDetail({ params }: PageProps) {
     title: '', type: 'Character', content: '', status: 'DRAFT'
   })
 
-  // State untuk AI Panel (BARU)
+  // State untuk AI Quest Panel
   const [showAiPanel, setShowAiPanel] = useState(false)
   const [quests, setQuests] = useState<any[]>([])
   const [questLoading, setQuestLoading] = useState(false)
   const [questError, setQuestError] = useState('')
+
+  // 🔍 STATE BARU: Consistency Checker
+  const [showConsistencyPanel, setShowConsistencyPanel] = useState(false)
+  const [consistencyComments, setConsistencyComments] = useState<any[]>([])
+  const [consistencySummary, setConsistencySummary] = useState('')
+  const [consistencyLoading, setConsistencyLoading] = useState(false)
+  const [consistencyError, setConsistencyError] = useState('')
 
   // 1. Ambil data entry
   useEffect(() => {
@@ -70,7 +77,7 @@ export default function EntryDetail({ params }: PageProps) {
     if (res.ok) router.push('/world')
   }
 
-  // 4. Request Quest ke AI (BARU)
+  // 4. Request Quest ke AI
   const handleAskAI = async () => {
     if (!entry) return
     setQuestLoading(true)
@@ -85,7 +92,7 @@ export default function EntryDetail({ params }: PageProps) {
           entryContext: {
             type: entry.type,
             title: entry.title,
-            content: entry.content, // AI dapat baca full content sekarang!
+            content: entry.content,
             tags: [],
             status: entry.status
           },
@@ -99,6 +106,50 @@ export default function EntryDetail({ params }: PageProps) {
       setQuestError('Error koneksi: ' + e.message)
     } finally {
       setQuestLoading(false)
+    }
+  }
+
+  // 🔍 FUNGSI BARU: Request Consistency Check
+  const handleCheckConsistency = async () => {
+    if (!entry) return
+    setConsistencyLoading(true)
+    setConsistencyError('')
+    setShowConsistencyPanel(true)
+    
+    try {
+      // Ambil entry terkait untuk konteks
+      const allEntriesRes = await fetch('/api/entries')
+      const allEntriesData = await allEntriesRes.json()
+      const relatedEntries = (allEntriesData.entries || [])
+        .filter((e: any) => e.id !== entry.id)
+        .slice(0, 5)
+      
+      const res = await fetch('/api/ai/consistency', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryContext: {
+            type: entry.type,
+            title: entry.title,
+            content: entry.content,
+            tags: entry.tags,
+            status: entry.status
+          },
+          relatedEntries
+        }),
+      })
+      
+      const data = await res.json()
+      if (data.success) {
+        setConsistencyComments(data.comments)
+        setConsistencySummary(data.summary)
+      } else {
+        setConsistencyError(data.error || 'Gagal menganalisis konsistensi')
+      }
+    } catch (e: any) {
+      setConsistencyError('Error koneksi: ' + e.message)
+    } finally {
+      setConsistencyLoading(false)
     }
   }
 
@@ -128,12 +179,20 @@ export default function EntryDetail({ params }: PageProps) {
             ← Kembali ke Arsip
           </button>
           {!isEditing && (
-             <button 
-               onClick={handleAskAI} 
-               className="flex items-center gap-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 px-4 py-2 rounded-lg text-sm font-medium transition"
-             >
-               ✨ Dapatkan Inspirasi AI
-             </button>
+             <div className="flex gap-2">
+               <button 
+                 onClick={handleAskAI} 
+                 className="flex items-center gap-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 px-4 py-2 rounded-lg text-sm font-medium transition"
+               >
+                 ✨ Dapatkan Inspirasi AI
+               </button>
+               <button 
+                 onClick={handleCheckConsistency} 
+                 className="flex items-center gap-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 px-4 py-2 rounded-lg text-sm font-medium transition"
+               >
+                 🔍 Cek Konsistensi
+               </button>
+             </div>
           )}
         </div>
 
@@ -206,7 +265,6 @@ export default function EntryDetail({ params }: PageProps) {
                   value={formData.content} 
                   onChange={e => setFormData({...formData, content: e.target.value})} 
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg p-4 text-white h-80 focus:ring-2 focus:ring-cyan-500 outline-none font-mono text-sm leading-relaxed"
-                  placeholder="Tulis lore di sini..."
                 />
               </div>
 
@@ -228,10 +286,10 @@ export default function EntryDetail({ params }: PageProps) {
           </div>
         )}
 
-        {/* AI QUEST PANEL (BARU) */}
+        {/* AI QUEST PANEL */}
         {showAiPanel && (
           <div className="mt-10 bg-gradient-to-br from-gray-900 to-purple-900/20 border border-purple-500/30 rounded-xl p-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-purple-300">✨ AI Quests untuk "{entry.title}"</h2>
               <button onClick={() => setShowAiPanel(false)} className="text-gray-400 hover:text-white"> Tutup</button>
             </div>
@@ -266,6 +324,84 @@ export default function EntryDetail({ params }: PageProps) {
               </div>
             ) : (
               <p className="text-gray-500">Belum ada quest.</p>
+            )}
+          </div>
+        )}
+
+        {/* 🔍 CONSISTENCY CHECKER PANEL (BARU) */}
+        {showConsistencyPanel && (
+          <div className="mt-10 bg-gradient-to-br from-gray-900 to-emerald-900/20 border border-emerald-500/30 rounded-xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-emerald-300">🔍 Consistency Check</h2>
+              <button onClick={() => setShowConsistencyPanel(false)} className="text-gray-400 hover:text-white">✕ Tutup</button>
+            </div>
+            
+            <p className="text-gray-300 mb-4">
+              Analisis untuk: <span className="font-semibold text-white">{entry.title}</span>
+            </p>
+            
+            {consistencyLoading ? (
+              <div className="flex items-center gap-3 text-emerald-300 py-4">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-400"></div>
+                <span>AI sedang menganalisis konsistensi dunia Anda...</span>
+              </div>
+            ) : consistencyError ? (
+              <p className="text-red-400 bg-red-900/20 p-4 rounded-lg">{consistencyError}</p>
+            ) : (
+              <div className="space-y-4">
+                {/* Summary */}
+                <div className="bg-gray-800/50 p-4 rounded-lg border-l-4 border-emerald-400">
+                  <p className="text-gray-200 font-medium">{consistencySummary}</p>
+                </div>
+                
+                {/* Comments */}
+                {consistencyComments.length > 0 ? (
+                  <div className="space-y-3">
+                    {consistencyComments.map((comment: any, idx: number) => (
+                      <div key={idx} className={`p-4 rounded-lg border-l-4 ${
+                        comment.severity === 'high' ? 'bg-red-900/20 border-red-400' :
+                        comment.severity === 'medium' ? 'bg-yellow-900/20 border-yellow-400' :
+                        'bg-gray-800/50 border-emerald-400'
+                      }`}>
+                        <div className="flex justify-between items-start gap-3 mb-1">
+                          <span className={`text-xs font-mono px-2 py-0.5 rounded ${
+                            comment.type === 'contradiction' ? 'bg-red-900/50 text-red-300' :
+                            comment.type === 'timeline' ? 'bg-purple-900/50 text-purple-300' :
+                            comment.type === 'motivation' ? 'bg-blue-900/50 text-blue-300' :
+                            comment.type === 'world-rule' ? 'bg-cyan-900/50 text-cyan-300' :
+                            'bg-gray-700 text-gray-300'
+                          }`}>
+                            {comment.type.toUpperCase()}
+                          </span>
+                          <span className={`text-xs ${
+                            comment.severity === 'high' ? 'text-red-400' :
+                            comment.severity === 'medium' ? 'text-yellow-400' :
+                            'text-emerald-400'
+                          }`}>
+                            {comment.severity.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-gray-200">{comment.message}</p>
+                        {comment.relatedEntries?.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            Terkait: {comment.relatedEntries.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Tidak ada isu konsistensi yang terdeteksi.</p>
+                )}
+                
+                <button 
+                  onClick={handleCheckConsistency} 
+                  disabled={consistencyLoading}
+                  className="mt-4 text-sm text-emerald-400 hover:text-emerald-300 underline disabled:opacity-50"
+                >
+                  🔄 Analisis Ulang
+                </button>
+              </div>
             )}
           </div>
         )}
